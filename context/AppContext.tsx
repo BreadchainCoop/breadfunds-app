@@ -1,9 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, type ReactNode } from "react"
-import type { Breadfund, WithdrawalRequest, User } from "@/lib/types" // We'll define these types next
+import { createContext, useContext, useState, type ReactNode, useCallback } from "react"
+import type { Breadfund, WithdrawalRequest, User } from "@/lib/types"
 
-// Define initial mock data directly or import from a mock-data file
 const MOCK_USER: User = {
   address: "0x1234567890AbCdEf1234567890AbCdEf12345678",
   name: "Alice",
@@ -13,23 +12,23 @@ const MOCK_BREADFUNDS: Breadfund[] = [
   {
     id: "bf-001",
     owner: "0xOwner1",
-    name: "Devs Mutual Aid",
+    name: "Devs Tech Insurance",
     token: "DAI",
     tokenAddress: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
     members: [MOCK_USER.address, "0xMember2", "0xMember3"],
     initialDeposit: 50,
-    fixedMonthlyDeposit: 10, // Base monthly for admin/etc.
+    fixedMonthlyDeposit: 10,
     memberPersonalSavings: {
       [MOCK_USER.address]: 100,
       "0xMember2": 150,
       "0xMember3": 120,
     },
-    depositInterval: 30, // days
-    maxWithdrawalsPerMember: 24, // e.g., for 2 years
+    depositInterval: 30,
+    maxWithdrawalsPerMember: 24,
     breadfundStart: new Date("2024-01-01").getTime(),
     minMembers: 3,
     maxMembers: 50,
-    totalBalance: 1500, // Sum of all deposits
+    totalBalance: 5500,
     memberContributionStatus: {
       [MOCK_USER.address]: { lastDepositDate: new Date("2025-05-15").getTime(), totalContributed: 350 },
       "0xMember2": { lastDepositDate: new Date("2025-05-10").getTime(), totalContributed: 400 },
@@ -39,14 +38,14 @@ const MOCK_BREADFUNDS: Breadfund[] = [
         id: "wr-001",
         breadfundId: "bf-001",
         requester: "0xMember2",
-        amountRequested: 300, // Based on their personal saving and withdrawal ratio
-        reason: "Medical emergency",
+        amountRequested: 1200,
+        reason: "Laptop replacement",
         timestamp: new Date("2025-06-01").getTime(),
         status: "pending",
         votes: {},
         votedYes: 0,
         votedNo: 0,
-        requiredVotes: 2, // (members.length - 1)
+        requiredVotes: 2,
       },
     ],
   },
@@ -83,51 +82,64 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [breadfunds, setBreadfunds] = useState<Breadfund[]>(MOCK_BREADFUNDS)
   const [isLoading, setIsLoading] = useState(false)
 
-  const connectWallet = () => {
+  const connectWallet = useCallback(() => {
     setIsLoading(true)
-    // Simulate wallet connection
     setTimeout(() => {
-      setUser(MOCK_USER)
-      setIsLoading(false)
-      console.log("Wallet connected:", MOCK_USER.address)
+      try {
+        setUser(MOCK_USER)
+        setIsLoading(false)
+        console.log("Wallet connected:", MOCK_USER.address)
+      } catch (error) {
+        console.error("Error in connectWallet setTimeout callback:", error)
+        setIsLoading(false)
+      }
     }, 500)
-  }
+  }, [])
 
-  const disconnectWallet = () => {
+  const disconnectWallet = useCallback(() => {
     setUser(null)
     console.log("Wallet disconnected")
-  }
+  }, [])
 
-  const addBreadfund = (
-    fundData: Omit<
-      Breadfund,
-      "id" | "owner" | "breadfundStart" | "members" | "totalBalance" | "memberContributionStatus" | "withdrawalRequests"
-    > & { personalSaving: number },
-  ) => {
-    if (!user) {
-      alert("Please connect your wallet first.")
-      return
-    }
-    const newBreadfund: Breadfund = {
-      ...fundData,
-      id: `bf-${Date.now()}`,
-      owner: user.address,
-      breadfundStart: Date.now(),
-      members: [user.address],
-      totalBalance: fundData.initialDeposit, // Initial deposit from creator
-      memberPersonalSavings: {
-        [user.address]: fundData.personalSaving,
-      },
-      memberContributionStatus: {
-        [user.address]: { lastDepositDate: Date.now(), totalContributed: fundData.initialDeposit },
-      },
-      withdrawalRequests: [],
-    }
-    setBreadfunds((prev) => [...prev, newBreadfund])
-    console.log("New Breadfund created:", newBreadfund)
-  }
+  const addBreadfund = useCallback(
+    (
+      fundData: Omit<
+        Breadfund,
+        | "id"
+        | "owner"
+        | "breadfundStart"
+        | "members"
+        | "totalBalance"
+        | "memberContributionStatus"
+        | "withdrawalRequests"
+      > & { personalSaving: number },
+    ) => {
+      if (!user) {
+        alert("Please connect your wallet first.")
+        return
+      }
+      const newBreadfund: Breadfund = {
+        ...fundData,
+        id: `bf-${Date.now()}`,
+        owner: user.address,
+        breadfundStart: Date.now(),
+        members: [user.address],
+        totalBalance: fundData.initialDeposit,
+        memberPersonalSavings: {
+          [user.address]: fundData.personalSaving,
+        },
+        memberContributionStatus: {
+          [user.address]: { lastDepositDate: Date.now(), totalContributed: fundData.initialDeposit },
+        },
+        withdrawalRequests: [],
+      }
+      setBreadfunds((prev) => [...prev, newBreadfund])
+      console.log("New insurance pool created:", newBreadfund)
+    },
+    [user],
+  )
 
-  const addDeposit = (breadfundId: string, memberAddress: string, amount: number) => {
+  const addDeposit = useCallback((breadfundId: string, memberAddress: string, amount: number) => {
     setBreadfunds((prevFunds) =>
       prevFunds.map((fund) => {
         if (fund.id === breadfundId && fund.members.includes(memberAddress)) {
@@ -135,12 +147,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const totalDepositAmount = fund.fixedMonthlyDeposit + personalSaving
           if (amount < totalDepositAmount) {
             alert(
-              `Minimum deposit is ${totalDepositAmount} ${fund.token} (fixed: ${fund.fixedMonthlyDeposit} + personal: ${personalSaving})`,
+              `Minimum premium is ${totalDepositAmount} ${fund.token} (fixed: ${fund.fixedMonthlyDeposit} + personal: ${personalSaving})`,
             )
             return fund
           }
-          // In a real scenario, you'd check ERC20 approval and transfer
-          console.log(`Simulating deposit of ${amount} ${fund.token} to ${breadfundId} by ${memberAddress}`)
+          console.log(`Simulating premium payment of ${amount} ${fund.token} to ${breadfundId} by ${memberAddress}`)
           return {
             ...fund,
             totalBalance: fund.totalBalance + amount,
@@ -156,87 +167,92 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return fund
       }),
     )
-  }
+  }, [])
 
-  const createWithdrawalRequest = (breadfundId: string, requesterAddress: string, amount: number, reason: string) => {
-    setBreadfunds((prevFunds) =>
-      prevFunds.map((fund) => {
-        if (fund.id === breadfundId && fund.members.includes(requesterAddress)) {
-          // Basic check: ensure user has enough "potential" claim based on their savings
-          // This is a simplification; smart contract would have precise logic
-          const personalSaving = fund.memberPersonalSavings[requesterAddress]
-          if (!personalSaving || amount > personalSaving * 10) {
-            // Arbitrary multiplier for demo
-            alert("Requested amount seems too high based on your personal savings contribution.")
-            return fund
+  const createWithdrawalRequest = useCallback(
+    (breadfundId: string, requesterAddress: string, amount: number, reason: string) => {
+      setBreadfunds((prevFunds) =>
+        prevFunds.map((fund) => {
+          if (fund.id === breadfundId && fund.members.includes(requesterAddress)) {
+            const personalSaving = fund.memberPersonalSavings[requesterAddress]
+            if (!personalSaving || amount > personalSaving * 10) {
+              alert("Claimed amount seems too high based on your personal premium contribution.")
+              return fund
+            }
+            if (fund.totalBalance < amount) {
+              alert("Insurance pool has insufficient liquidity for this claim.")
+              return fund
+            }
+            const newRequest: WithdrawalRequest = {
+              id: `wr-${Date.now()}`,
+              breadfundId,
+              requester: requesterAddress,
+              amountRequested: amount,
+              reason,
+              timestamp: Date.now(),
+              status: "pending",
+              votes: {},
+              votedYes: 0,
+              votedNo: 0,
+              requiredVotes: Math.ceil((fund.members.length - 1) * 0.66),
+            }
+            console.log("Creating claim request:", newRequest)
+            return {
+              ...fund,
+              withdrawalRequests: [...fund.withdrawalRequests, newRequest],
+            }
           }
-          if (fund.totalBalance < amount) {
-            alert("Breadfund has insufficient balance for this request.")
-            return fund
-          }
+          return fund
+        }),
+      )
+    },
+    [],
+  )
 
-          const newRequest: WithdrawalRequest = {
-            id: `wr-${Date.now()}`,
-            breadfundId,
-            requester: requesterAddress,
-            amountRequested: amount,
-            reason,
-            timestamp: Date.now(),
-            status: "pending",
-            votes: {},
-            votedYes: 0,
-            votedNo: 0,
-            requiredVotes: Math.ceil((fund.members.length - 1) * 0.66), // 66% of other members
-          }
-          console.log("Creating withdrawal request:", newRequest)
-          return {
-            ...fund,
-            withdrawalRequests: [...fund.withdrawalRequests, newRequest],
-          }
-        }
-        return fund
-      }),
-    )
-  }
+  const voteOnRequest = useCallback(
+    (breadfundId: string, requestId: string, voterAddress: string, vote: "yes" | "no") => {
+      setBreadfunds((prevFunds) =>
+        prevFunds.map((fund) => {
+          if (fund.id === breadfundId) {
+            return {
+              ...fund,
+              withdrawalRequests: fund.withdrawalRequests.map((req) => {
+                if (
+                  req.id === requestId &&
+                  req.requester !== voterAddress &&
+                  !req.votes[voterAddress] &&
+                  req.status === "pending"
+                ) {
+                  const updatedVotes = { ...req.votes, [voterAddress]: vote }
+                  const votedYes = Object.values(updatedVotes).filter((v) => v === "yes").length
+                  const votedNo = Object.values(updatedVotes).filter((v) => v === "no").length
+                  let newStatus = req.status
 
-  const voteOnRequest = (breadfundId: string, requestId: string, voterAddress: string, vote: "yes" | "no") => {
-    setBreadfunds((prevFunds) =>
-      prevFunds.map((fund) => {
-        if (fund.id === breadfundId) {
-          return {
-            ...fund,
-            withdrawalRequests: fund.withdrawalRequests.map((req) => {
-              if (req.id === requestId && req.requester !== voterAddress && !req.votes[voterAddress]) {
-                const updatedVotes = { ...req.votes, [voterAddress]: vote }
-                const votedYes = Object.values(updatedVotes).filter((v) => v === "yes").length
-                const votedNo = Object.values(updatedVotes).filter((v) => v === "no").length
-                let newStatus = req.status
-
-                // Check if voting period ended or all voted
-                const totalPotentialVoters = fund.members.length - 1 // Exclude requester
-                if (Object.keys(updatedVotes).length === totalPotentialVoters) {
-                  if (votedYes >= req.requiredVotes) {
-                    newStatus = "approved"
-                    console.log(`Request ${requestId} approved.`)
-                  } else {
-                    newStatus = "rejected"
-                    console.log(`Request ${requestId} rejected.`)
+                  const totalPotentialVoters = fund.members.length - 1
+                  if (Object.keys(updatedVotes).length === totalPotentialVoters) {
+                    if (votedYes >= req.requiredVotes) {
+                      newStatus = "approved"
+                      console.log(`Claim ${requestId} approved.`)
+                    } else {
+                      newStatus = "rejected"
+                      console.log(`Claim ${requestId} rejected.`)
+                    }
                   }
+                  console.log(`Vote cast by ${voterAddress} on claim ${requestId}: ${vote}`)
+                  return { ...req, votes: updatedVotes, votedYes, votedNo, status: newStatus }
                 }
-
-                console.log(`Vote cast by ${voterAddress} on ${requestId}: ${vote}`)
-                return { ...req, votes: updatedVotes, votedYes, votedNo, status: newStatus }
-              }
-              return req
-            }),
+                return req
+              }),
+            }
           }
-        }
-        return fund
-      }),
-    )
-  }
+          return fund
+        }),
+      )
+    },
+    [],
+  )
 
-  const processWithdrawal = (breadfundId: string, requestId: string) => {
+  const processWithdrawal = useCallback((breadfundId: string, requestId: string) => {
     setBreadfunds((prevFunds) =>
       prevFunds.map((fund) => {
         if (fund.id === breadfundId) {
@@ -246,24 +262,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           if (requestIndex > -1) {
             const request = fund.withdrawalRequests[requestIndex]
             if (fund.totalBalance >= request.amountRequested) {
-              console.log(`Processing withdrawal of ${request.amountRequested} ${fund.token} for request ${requestId}`)
+              console.log(`Processing payout of ${request.amountRequested} ${fund.token} for claim ${requestId}`)
               const updatedRequests = [...fund.withdrawalRequests]
               updatedRequests[requestIndex] = { ...request, status: "withdrawn" }
               return {
                 ...fund,
                 totalBalance: fund.totalBalance - request.amountRequested,
                 withdrawalRequests: updatedRequests,
-                // Potentially update member's maxWithdrawals count
               }
             } else {
-              alert("Insufficient fund balance to process withdrawal.")
+              alert("Insufficient pool liquidity to process payout.")
+              const updatedRequests = [...fund.withdrawalRequests]
+              updatedRequests[requestIndex] = { ...request, status: "rejected" }
+              return { ...fund, withdrawalRequests: updatedRequests }
             }
           }
         }
         return fund
       }),
     )
-  }
+  }, [])
 
   return (
     <AppContext.Provider

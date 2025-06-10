@@ -40,10 +40,10 @@ export default function BreadfundDetailPage() {
   }, [breadfunds, fundId])
 
   if (!fund) {
-    return <p className="text-center py-10">Breadfund not found.</p>
+    return <p className="text-center py-10">Insurance pool not found.</p>
   }
   if (!user) {
-    return <p className="text-center py-10">Please connect your wallet to view fund details.</p>
+    return <p className="text-center py-10">Please connect your wallet to view pool details.</p>
   }
 
   const isMember = fund.members.includes(user.address)
@@ -54,46 +54,46 @@ export default function BreadfundDetailPage() {
   const handleDeposit = () => {
     const amount = Number.parseFloat(depositAmount)
     if (isNaN(amount) || amount <= 0) {
-      toast({ title: "Error", description: "Invalid deposit amount.", variant: "destructive" })
+      toast({ title: "Error", description: "Invalid premium amount.", variant: "destructive" })
       return
     }
     if (amount < totalMonthlyContribution) {
       toast({
         title: "Info",
-        description: `Minimum deposit is ${totalMonthlyContribution} ${fund.token} (Fixed: ${userFixedMonthlyDeposit} + Personal: ${userPersonalSaving})`,
+        description: `Minimum premium is ${totalMonthlyContribution} ${fund.token} (Fixed: ${userFixedMonthlyDeposit} + Personal: ${userPersonalSaving})`,
         variant: "default",
       })
       return
     }
     addDeposit(fund.id, user.address, amount)
-    toast({ title: "Success", description: `Deposited ${amount} ${fund.token}.` })
+    toast({ title: "Success", description: `Paid premium of ${amount} ${fund.token}.` })
     setDepositAmount("")
   }
 
   const handleRequestWithdrawal = () => {
     const amount = Number.parseFloat(requestAmount)
     if (isNaN(amount) || amount <= 0) {
-      toast({ title: "Error", description: "Invalid request amount.", variant: "destructive" })
+      toast({ title: "Error", description: "Invalid claim amount.", variant: "destructive" })
       return
     }
     if (!requestReason.trim()) {
-      toast({ title: "Error", description: "Please provide a reason for your request.", variant: "destructive" })
+      toast({ title: "Error", description: "Please provide a reason for your claim.", variant: "destructive" })
       return
     }
     createWithdrawalRequest(fund.id, user.address, amount, requestReason)
-    toast({ title: "Success", description: `Withdrawal request for ${amount} ${fund.token} submitted.` })
+    toast({ title: "Success", description: `Claim for ${amount} ${fund.token} submitted.` })
     setRequestAmount("")
     setRequestReason("")
   }
 
   const handleVote = (requestId: string, vote: "yes" | "no") => {
     voteOnRequest(fund.id, requestId, user.address, vote)
-    toast({ title: "Success", description: `Voted ${vote} on request ${requestId}.` })
+    toast({ title: "Success", description: `Voted ${vote} on claim ${requestId}.` })
   }
 
   const handleProcessWithdrawal = (requestId: string) => {
     processWithdrawal(fund.id, requestId)
-    toast({ title: "Success", description: `Withdrawal for request ${requestId} processed.` })
+    toast({ title: "Success", description: `Claim ${requestId} paid out.` })
   }
 
   const canVote = (request: WithdrawalRequest) => {
@@ -127,17 +127,18 @@ export default function BreadfundDetailPage() {
         <CardHeader>
           <CardTitle className="text-3xl">{fund.name}</CardTitle>
           <CardDescription>
-            ID: {fund.id} - Owned by: {fund.owner.substring(0, 6)}...{fund.owner.substring(fund.owner.length - 4)}
+            Pool ID: {fund.id} - Created by: {fund.owner.substring(0, 6)}...
+            {fund.owner.substring(fund.owner.length - 4)}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Fund Details</h3>
+            <h3 className="font-semibold text-lg">Pool Details</h3>
             <p className="flex items-center">
               <ShieldCheck className="mr-2 h-5 w-5 text-primary" /> Token: {fund.token}
             </p>
             <p className="flex items-center">
-              <Coins className="mr-2 h-5 w-5 text-primary" /> Total Balance: {fund.totalBalance.toLocaleString()}{" "}
+              <Coins className="mr-2 h-5 w-5 text-primary" /> Total Liquidity: {fund.totalBalance.toLocaleString()}{" "}
               {fund.token}
             </p>
             <p className="flex items-center">
@@ -152,14 +153,14 @@ export default function BreadfundDetailPage() {
               <Handshake className="mr-2 h-5 w-5 text-primary" /> Initial Deposit: {fund.initialDeposit} {fund.token}
             </p>
             <p className="flex items-center">
-              <Coins className="mr-2 h-5 w-5 text-primary" /> Fixed Monthly Deposit: {fund.fixedMonthlyDeposit}{" "}
+              <Coins className="mr-2 h-5 w-5 text-primary" /> Fixed Monthly Premium: {fund.fixedMonthlyDeposit}{" "}
               {fund.token}
             </p>
             <p className="flex items-center">
-              <CalendarDays className="mr-2 h-5 w-5 text-primary" /> Deposit Interval: {fund.depositInterval} days
+              <CalendarDays className="mr-2 h-5 w-5 text-primary" /> Premium Interval: {fund.depositInterval} days
             </p>
             <p className="flex items-center">
-              <MessageSquareWarning className="mr-2 h-5 w-5 text-primary" /> Max Withdrawals/Member:{" "}
+              <MessageSquareWarning className="mr-2 h-5 w-5 text-primary" /> Max Claims/Member:{" "}
               {fund.maxWithdrawalsPerMember}
             </p>
           </div>
@@ -167,19 +168,19 @@ export default function BreadfundDetailPage() {
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">Your Status</h3>
               <p>
-                Your Personal Monthly Saving: {userPersonalSaving} {fund.token}
+                Your Personal Monthly Premium: {userPersonalSaving} {fund.token}
               </p>
               <p>
-                Your Total Monthly Contribution: {totalMonthlyContribution} {fund.token}
+                Your Total Monthly Premium: {totalMonthlyContribution} {fund.token}
               </p>
               <p>
-                Last Contribution:{" "}
+                Last Premium Paid:{" "}
                 {fund.memberContributionStatus[user.address]
                   ? new Date(fund.memberContributionStatus[user.address].lastDepositDate).toLocaleDateString()
                   : "N/A"}
               </p>
               <p>
-                Total Contributed: {fund.memberContributionStatus[user.address]?.totalContributed || 0} {fund.token}
+                Total Premiums Paid: {fund.memberContributionStatus[user.address]?.totalContributed || 0} {fund.token}
               </p>
             </div>
           )}
@@ -189,21 +190,15 @@ export default function BreadfundDetailPage() {
       {!isMember && (
         <Card>
           <CardHeader>
-            <CardTitle>Join this Fund</CardTitle>
+            <CardTitle>Join this Pool</CardTitle>
             <CardDescription>
-              To participate, you need to make an initial deposit and set your personal monthly saving.
+              To get coverage, you need to make an initial deposit and set your personal monthly premium.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* TODO: Implement Join Fund Logic:
-                1. User specifies their personal monthly saving amount.
-                2. User pays initialDeposit + first (fixedMonthlyDeposit + personalSaving).
-                3. User is added to fund.members and fund.memberPersonalSavings.
-            */}
-            <Button disabled>Join Fund (Not Implemented)</Button>
+            <Button disabled>Join Pool (Not Implemented)</Button>
             <p className="text-xs text-muted-foreground mt-2">
-              Joining requires an initial deposit of {fund.initialDeposit} {fund.token} plus your first monthly
-              contribution.
+              Joining requires an initial deposit of {fund.initialDeposit} {fund.token} plus your first monthly premium.
             </p>
           </CardContent>
         </Card>
@@ -213,9 +208,9 @@ export default function BreadfundDetailPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Make a Deposit</CardTitle>
+              <CardTitle>Pay Premium</CardTitle>
               <CardDescription>
-                Contribute your monthly amount (Fixed: {userFixedMonthlyDeposit} + Personal: {userPersonalSaving} ={" "}
+                Pay your monthly premium (Fixed: {userFixedMonthlyDeposit} + Personal: {userPersonalSaving} ={" "}
                 {totalMonthlyContribution} {fund.token}).
               </CardDescription>
             </CardHeader>
@@ -232,18 +227,18 @@ export default function BreadfundDetailPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleDeposit}>Deposit</Button>
+              <Button onClick={handleDeposit}>Pay Premium</Button>
             </CardFooter>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Request Withdrawal</CardTitle>
-              <CardDescription>If you need assistance, you can request a withdrawal.</CardDescription>
+              <CardTitle>File a Claim</CardTitle>
+              <CardDescription>If you need to make a claim, you can request a withdrawal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="requestAmount">Amount ({fund.token})</Label>
+                <Label htmlFor="requestAmount">Claim Amount ({fund.token})</Label>
                 <Input
                   id="requestAmount"
                   type="number"
@@ -253,17 +248,17 @@ export default function BreadfundDetailPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="requestReason">Reason for Request</Label>
+                <Label htmlFor="requestReason">Reason for Claim</Label>
                 <Textarea
                   id="requestReason"
                   value={requestReason}
                   onChange={(e) => setRequestReason(e.target.value)}
-                  placeholder="Briefly explain your need"
+                  placeholder="Briefly explain your claim (e.g., 'Cracked phone screen')"
                 />
               </div>
             </CardContent>
             <CardFooter>
-              <Button onClick={handleRequestWithdrawal}>Submit Request</Button>
+              <Button onClick={handleRequestWithdrawal}>Submit Claim</Button>
             </CardFooter>
           </Card>
         </>
@@ -271,22 +266,20 @@ export default function BreadfundDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Withdrawal Requests</CardTitle>
-          <CardDescription>Review and vote on pending requests, or manage your approved requests.</CardDescription>
+          <CardTitle>Claims</CardTitle>
+          <CardDescription>Review and vote on pending claims, or manage your approved claims.</CardDescription>
         </CardHeader>
         <CardContent>
           {fund.withdrawalRequests.length === 0 ? (
-            <p className="text-muted-foreground">No active withdrawal requests.</p>
+            <p className="text-muted-foreground">No active claims.</p>
           ) : (
             <ul className="space-y-4">
               {fund.withdrawalRequests.map((req) => (
                 <li key={req.id} className="p-4 border rounded-md">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-semibold">Request ID: {req.id.substring(0, 8)}...</p>
-                      <p>
-                        Requester: {req.requester === user?.address ? "You" : `${req.requester.substring(0, 6)}...`}
-                      </p>
+                      <p className="font-semibold">Claim ID: {req.id.substring(0, 8)}...</p>
+                      <p>Claimant: {req.requester === user?.address ? "You" : `${req.requester.substring(0, 6)}...`}</p>
                       <p>
                         Amount: {req.amountRequested} {fund.token}
                       </p>
@@ -317,7 +310,7 @@ export default function BreadfundDetailPage() {
                   )}
                   {canWithdraw(req) && (
                     <Button className="mt-4" size="sm" onClick={() => handleProcessWithdrawal(req.id)}>
-                      Withdraw Approved Amount
+                      Withdraw Payout
                     </Button>
                   )}
                 </li>
@@ -341,7 +334,7 @@ export default function BreadfundDetailPage() {
                     : `${memberAddress.substring(0, 10)}...`}
                 </span>
                 <span className="text-muted-foreground">
-                  Personal Saving: {fund.memberPersonalSavings[memberAddress] || "N/A"} {fund.token}
+                  Personal Premium: {fund.memberPersonalSavings[memberAddress] || "N/A"} {fund.token}
                 </span>
               </li>
             ))}
