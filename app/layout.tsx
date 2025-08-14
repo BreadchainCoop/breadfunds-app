@@ -9,9 +9,9 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Breadfunds Frontend",
+  title: "Bread Insurance Frontend",
   description: "Manage your mutual aid funds",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
             <Header />
             <main className="flex-grow container mx-auto px-4 py-8">{children}</main>
             <footer className="py-4 text-center text-sm text-muted-foreground">
-              Breadfunds &copy; {new Date().getFullYear()}
+              Bread Insurance &copy; {new Date().getFullYear()}
             </footer>
           </div>
           <Toaster />

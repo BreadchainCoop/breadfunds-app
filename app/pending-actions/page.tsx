@@ -9,7 +9,7 @@ import { Vote, Send, Info, CheckCircle, XCircle } from "lucide-react"
 import type { WithdrawalRequest } from "@/lib/types"
 
 export default function PendingActionsPage() {
-  const { user, breadfunds, voteOnRequest, processWithdrawal } = useAppContext()
+  const { user, breadInsurances, voteOnRequest, processWithdrawal } = useAppContext()
 
   if (!user) {
     return (
@@ -22,7 +22,7 @@ export default function PendingActionsPage() {
 
   const actions: { type: "vote" | "withdraw"; fundId: string; fundName: string; request: WithdrawalRequest }[] = []
 
-  breadfunds.forEach((fund) => {
+  breadInsurances.forEach((fund) => {
     if (fund.members.includes(user.address)) {
       fund.withdrawalRequests.forEach((req) => {
         // Pending votes
@@ -62,8 +62,8 @@ export default function PendingActionsPage() {
                   {action.type === "vote" ? "Vote Required" : "Withdrawal Approved"}
                 </CardTitle>
                 <CardDescription>
-                  In Breadfund:{" "}
-                  <Link href={`/breadfund/${action.fundId}`} className="underline hover:text-primary">
+                  In Bread Insurance:{" "}
+                  <Link href={`/bread-insurance/${action.fundId}`} className="underline hover:text-primary">
                     {action.fundName}
                   </Link>
                 </CardDescription>
@@ -75,7 +75,7 @@ export default function PendingActionsPage() {
                   {action.request.requester === user.address ? "You" : `${action.request.requester.substring(0, 6)}...`}
                 </p>
                 <p>
-                  Amount: {action.request.amountRequested} {breadfunds.find((f) => f.id === action.fundId)?.token}
+                  Amount: {action.request.amountRequested} {breadInsurances.find((f) => f.id === action.fundId)?.token}
                 </p>
                 <p>Reason: {action.request.reason}</p>
                 {action.type === "vote" && (

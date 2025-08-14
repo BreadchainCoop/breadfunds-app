@@ -165,24 +165,28 @@ export default function BreadfundDetailPage() {
             </p>
           </div>
           {isMember && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-lg">Your Status</h3>
-              <p>
-                Your Personal Monthly Premium: {userPersonalSaving} {fund.token}
-              </p>
-              <p>
-                Your Total Monthly Premium: {totalMonthlyContribution} {fund.token}
-              </p>
-              <p>
-                Last Premium Paid:{" "}
-                {fund.memberContributionStatus[user.address]
-                  ? new Date(fund.memberContributionStatus[user.address].lastDepositDate).toLocaleDateString()
-                  : "N/A"}
-              </p>
-              <p>
-                Total Premiums Paid: {fund.memberContributionStatus[user.address]?.totalContributed || 0} {fund.token}
-              </p>
-            </div>
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="text-lg">Your Status</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p>
+                  Your Personal Monthly Premium: {userPersonalSaving} {fund.token}
+                </p>
+                <p>
+                  Your Total Monthly Premium: {totalMonthlyContribution} {fund.token}
+                </p>
+                <p>
+                  Last Premium Paid:{" "}
+                  {fund.memberContributionStatus[user.address]
+                    ? new Date(fund.memberContributionStatus[user.address].lastDepositDate).toLocaleDateString()
+                    : "N/A"}
+                </p>
+                <p>
+                  Total Premiums Paid: {fund.memberContributionStatus[user.address]?.totalContributed || 0} {fund.token}
+                </p>
+              </CardContent>
+            </Card>
           )}
         </CardContent>
       </Card>

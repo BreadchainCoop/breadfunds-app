@@ -3,7 +3,7 @@ export interface User {
   name?: string // Optional: if you want to display names
 }
 
-export interface Breadfund {
+export interface BreadInsurance {
   id: string
   name: string
   owner: string // Address
@@ -15,7 +15,7 @@ export interface Breadfund {
   memberPersonalSavings: { [userAddress: string]: number } // Individual monthly personal saving amount
   depositInterval: number // In days, e.g., 30 for monthly
   maxWithdrawalsPerMember: number // Max number of withdrawals a member can make
-  breadfundStart: number // Timestamp of creation
+  breadInsuranceStart: number // Timestamp of creation
   minMembers: number
   maxMembers: number
   totalBalance: number // Current total balance in the fund (in token units)
@@ -30,7 +30,7 @@ export interface Breadfund {
 
 export interface WithdrawalRequest {
   id: string
-  breadfundId: string
+  breadInsuranceId: string
   requester: string // Member address
   amountRequested: number // Amount in token units
   reason: string
