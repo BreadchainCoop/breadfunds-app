@@ -121,7 +121,8 @@ export default function LandingPage() {
               </div>
               <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">A New Model for Insurance</h2>
               <p className="text-lg text-muted-foreground md:text-xl leading-relaxed">
-                Bread Insurance is a highly flexible model for peer-to-peer insurance, inspired by the Dutch{" "}
+                Bread Insurance creates peer-to-peer insurance pools where members contribute premiums and receive
+                payouts for valid claims. Inspired by the Dutch{" "}
                 <a
                   href="https://en.wikipedia.org/wiki/Broodfonds"
                   target="_blank"
@@ -129,11 +130,8 @@ export default function LandingPage() {
                   className="underline hover:text-primary transition-colors"
                 >
                   "Broodfonds,"
-                </a>
-                . Members make regular contributions (premiums) to a collective pool. When a member has a valid
-                claim—whether for income loss like the original "Broodfonds," or for material loss like a broken laptop
-                or phone—they receive a payout from this shared fund. It's a system built on aligned incentives and
-                direct, community-based coverage.
+                </a>{" "}
+                it covers everything from income loss to device damage through community-based mutual support.
               </p>
             </div>
           </div>
@@ -158,7 +156,7 @@ export default function LandingPage() {
           <div className="flex flex-col items-center justify-center space-y-6 text-center">
             <div className="space-y-4 max-w-4xl">
               <div className="inline-block rounded-full bg-primary/10 text-primary px-4 py-2 text-sm font-medium">
-                The Benefits 
+                The Benefits
               </div>
               <h2 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">The Crypto Supercharge</h2>
               <p className="text-lg text-muted-foreground md:text-xl leading-relaxed">
