@@ -19,9 +19,21 @@ import {
   XCircle,
   Hourglass,
   Send,
+  LogOut,
+  AlertTriangle,
 } from "lucide-react"
 import type { WithdrawalRequest } from "@/lib/types"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function BreadfundDetailPage() {
   const params = useParams()
@@ -34,6 +46,7 @@ export default function BreadfundDetailPage() {
   const [depositAmount, setDepositAmount] = useState("")
   const [requestAmount, setRequestAmount] = useState("")
   const [requestReason, setRequestReason] = useState("")
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
 
   useEffect(() => {
     setFund(breadfunds.find((f) => f.id === fundId))
@@ -50,6 +63,21 @@ export default function BreadfundDetailPage() {
   const userPersonalSaving = fund.memberPersonalSavings[user.address] || 0
   const userFixedMonthlyDeposit = fund.fixedMonthlyDeposit
   const totalMonthlyContribution = userPersonalSaving + userFixedMonthlyDeposit
+
+  const checkPremiumStatus = () => {
+    const memberStatus = fund.memberContributionStatus[user.address]
+    if (!memberStatus) return { hasPaid: false, daysSinceLastPayment: Number.POSITIVE_INFINITY }
+
+    const lastPaymentDate = new Date(memberStatus.lastDepositDate)
+    const currentDate = new Date()
+    const daysSinceLastPayment = Math.floor((currentDate.getTime() - lastPaymentDate.getTime()) / (1000 * 60 * 60 * 24))
+
+    const hasPaid = daysSinceLastPayment <= fund.depositInterval
+
+    return { hasPaid, daysSinceLastPayment }
+  }
+
+  const { hasPaid, daysSinceLastPayment } = checkPremiumStatus()
 
   const handleDeposit = () => {
     const amount = Number.parseFloat(depositAmount)
@@ -68,6 +96,23 @@ export default function BreadfundDetailPage() {
     addDeposit(fund.id, user.address, amount)
     toast({ title: "Success", description: `Paid premium of ${amount} ${fund.token}.` })
     setDepositAmount("")
+  }
+
+  const handleLeavePool = () => {
+    if (!hasPaid) {
+      addDeposit(fund.id, user.address, totalMonthlyContribution)
+      toast({
+        title: "Premium Paid",
+        description: `Paid outstanding premium of ${totalMonthlyContribution} ${fund.token}. You can now leave the pool.`,
+      })
+    } else {
+      toast({
+        title: "Left Pool",
+        description: "You have successfully left the insurance pool.",
+      })
+      router.push("/my-account")
+    }
+    setShowLeaveDialog(false)
   }
 
   const handleRequestWithdrawal = () => {
@@ -185,7 +230,77 @@ export default function BreadfundDetailPage() {
                 <p>
                   Total Premiums Paid: {fund.memberContributionStatus[user.address]?.totalContributed || 0} {fund.token}
                 </p>
+                <div className="pt-2 border-t">
+                  <p className={`text-sm font-medium ${hasPaid ? "text-green-600" : "text-red-600"}`}>
+                    Premium Status: {hasPaid ? "✓ Current" : "⚠ Outstanding"}
+                  </p>
+                  {!hasPaid && (
+                    <p className="text-xs text-muted-foreground">{daysSinceLastPayment} days since last payment</p>
+                  )}
+                </div>
               </CardContent>
+              <CardFooter>
+                <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Leave Pool
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center">
+                        <AlertTriangle className="mr-2 h-5 w-5 text-orange-500" />
+                        Leave Insurance Pool
+                      </DialogTitle>
+                      <DialogDescription>
+                        You are about to leave this insurance pool. Please review the conditions below.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      {hasPaid ? (
+                        <Alert>
+                          <CheckCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>You can leave at no cost.</strong> Your premium is current and you have fulfilled
+                            your obligations for this interval.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Alert>
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertDescription>
+                            <strong>Outstanding premium required.</strong> You must pay your premium of{" "}
+                            {totalMonthlyContribution} {fund.token} before leaving the pool.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      <div className="text-sm text-muted-foreground space-y-2">
+                        <p>
+                          <strong>Leaving conditions:</strong>
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                          <li>Members can only leave after paying their last premium for the current interval</li>
+                          <li>If premium is current: Leave immediately at no cost</li>
+                          <li>If premium is outstanding: Must pay premium first, then leave</li>
+                          <li>Once you leave, you will lose coverage and cannot rejoin without approval</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <DialogFooter className="flex-col sm:flex-row gap-2">
+                      <Button variant="outline" onClick={() => setShowLeaveDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleLeavePool} variant={hasPaid ? "destructive" : "default"}>
+                        {hasPaid ? "Leave Pool" : `Pay Premium & Leave (${totalMonthlyContribution} ${fund.token})`}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardFooter>
             </Card>
           )}
         </CardContent>

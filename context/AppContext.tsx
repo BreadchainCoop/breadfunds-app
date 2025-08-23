@@ -68,7 +68,7 @@ interface AppContextType {
       Breadfund,
       "id" | "owner" | "breadfundStart" | "members" | "totalBalance" | "memberContributionStatus" | "withdrawalRequests"
     > & { personalSaving: number },
-  ) => void
+  ) => string
   addDeposit: (breadfundId: string, memberAddress: string, amount: number) => void
   createWithdrawalRequest: (breadfundId: string, requesterAddress: string, amount: number, reason: string) => void
   voteOnRequest: (breadfundId: string, requestId: string, voterAddress: string, vote: "yes" | "no") => void
@@ -116,11 +116,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     ) => {
       if (!user) {
         alert("Please connect your wallet first.")
-        return
+        return ""
       }
+      const poolId = `bf-${Date.now()}`
       const newBreadfund: Breadfund = {
         ...fundData,
-        id: `bf-${Date.now()}`,
+        id: poolId,
         owner: user.address,
         breadfundStart: Date.now(),
         members: [user.address],
@@ -135,6 +136,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
       setBreadfunds((prev) => [...prev, newBreadfund])
       console.log("New insurance pool created:", newBreadfund)
+      return poolId
     },
     [user],
   )

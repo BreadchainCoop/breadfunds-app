@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { HelpCircle } from "lucide-react"
+import { HelpCircle, Users, Shield, ArrowRight, X } from "lucide-react"
 import { useAppContext } from "@/context/AppContext"
 import { useToast } from "@/components/ui/use-toast"
 import { ALLOWED_TOKENS_LIST } from "@/context/AppContext"
@@ -33,6 +33,11 @@ export default function CreateBreadfundPage() {
   const router = useRouter()
   const { toast } = useToast()
 
+  const [isCreating, setIsCreating] = useState(false)
+  const [loadingStep, setLoadingStep] = useState(0)
+  const [showExplainer, setShowExplainer] = useState(true)
+  const [currentExplainerStep, setCurrentExplainerStep] = useState(0)
+
   const [template, setTemplate] = useState<FundTemplate>("custom")
   const [name, setName] = useState("")
   const [tokenAddress, setTokenAddress] = useState("")
@@ -43,6 +48,67 @@ export default function CreateBreadfundPage() {
   const [maxWithdrawalsPerMember, setMaxWithdrawalsPerMember] = useState("24")
   const [minMembers, setMinMembers] = useState("3")
   const [maxMembers, setMaxMembers] = useState("50")
+
+  const explainerCards = [
+    {
+      icon: <Shield className="h-8 w-8 text-primary" />,
+      title: "Mutual Insurance Pool",
+      description:
+        "A group of people pool money together to help each other during emergencies. No big insurance company needed.",
+      details:
+        "Think of it as a shared emergency fund where everyone contributes small amounts regularly, and members can request help when they face covered situations like illness or equipment damage.",
+    },
+    {
+      icon: <Users className="h-8 w-8 text-primary" />,
+      title: "You're About to Create a New Pool",
+      description: "You'll set up the rules, contribution amounts, and coverage terms that all members will follow.",
+      details:
+        "As the creator, you define how much members contribute monthly, what situations are covered, and how claims work. This becomes the foundation for your insurance community.",
+    },
+    {
+      icon: <ArrowRight className="h-8 w-8 text-primary" />,
+      title: "Set Your Rules",
+      description:
+        "Define monthly contributions, coverage amounts, member limits, and what situations qualify for claims.",
+      details:
+        "These rules ensure fairness and sustainability. You'll set contribution amounts, maximum payouts, and the minimum number of members needed before the pool becomes active.",
+    },
+    {
+      icon: <Users className="h-8 w-8 text-green-600" />,
+      title: "Invite Members & Start Coverage",
+      description: "Once you have enough members, everyone starts contributing and the pool becomes active for claims.",
+      details:
+        "Share your pool with friends, colleagues, or community members. When you reach the minimum member count, everyone begins making regular contributions and coverage starts.",
+    },
+    {
+      icon: <Shield className="h-8 w-8 text-blue-600" />,
+      title: "Claims Are Voted On",
+      description:
+        "All claims can be contested and decided by member votes, ensuring transparency and preventing fraud.",
+      details:
+        "When someone makes a claim, other members can review and vote on it. This democratic process keeps the system fair and builds trust within the community.",
+    },
+  ]
+
+  const loadingSteps = [
+    "Validating pool parameters...",
+    "Setting up smart contract...",
+    "Initializing member registry...",
+    "Configuring payment system...",
+    "Finalizing pool creation...",
+  ]
+
+  const handleNextExplainer = () => {
+    if (currentExplainerStep < explainerCards.length - 1) {
+      setCurrentExplainerStep(currentExplainerStep + 1)
+    } else {
+      setShowExplainer(false)
+    }
+  }
+
+  const handleSkipExplainer = () => {
+    setShowExplainer(false)
+  }
 
   useEffect(() => {
     if (template === "broodfonds") {
@@ -67,36 +133,197 @@ export default function CreateBreadfundPage() {
     }
   }, [template])
 
-  if (!user) {
-    return <p className="text-center py-10">Please connect your wallet to create an insurance pool.</p>
+  console.log("[v0] User authentication state:", { user: !!user, userAddress: user?.address })
+  console.log("[v0] Available tokens:", ALLOWED_TOKENS_LIST)
+  console.log("[v0] Selected token address:", tokenAddress)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log("[v0] Form submission started")
+    setIsCreating(true)
+    setLoadingStep(0)
+
+    try {
+      if (!user) {
+        console.log("[v0] No user found, showing auth error")
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to create an insurance pool.",
+          variant: "destructive",
+        })
+        setIsCreating(false)
+        return
+      }
+
+      if (!tokenAddress) {
+        console.log("[v0] No token selected")
+        toast({
+          title: "Token Required",
+          description: "Please select a token for premiums and payouts.",
+          variant: "destructive",
+        })
+        setIsCreating(false)
+        return
+      }
+
+      const selectedToken = ALLOWED_TOKENS_LIST.find((t) => t.address === tokenAddress)
+      if (!selectedToken) {
+        console.log("[v0] Invalid token selected")
+        toast({ title: "Error", description: "Invalid token selected.", variant: "destructive" })
+        setIsCreating(false)
+        return
+      }
+
+      for (let i = 0; i < loadingSteps.length; i++) {
+        setLoadingStep(i)
+        await new Promise((resolve) => setTimeout(resolve, 800))
+      }
+
+      console.log("[v0] Creating pool with data:", {
+        name,
+        token: selectedToken.symbol,
+        tokenAddress: selectedToken.address,
+        initialDeposit: Number.parseFloat(initialDeposit),
+        fixedMonthlyDeposit: Number.parseFloat(fixedMonthlyDeposit),
+        personalSaving: Number.parseFloat(personalSaving),
+        depositInterval: Number.parseInt(depositInterval),
+        maxWithdrawalsPerMember: Number.parseInt(maxWithdrawalsPerMember),
+        minMembers: Number.parseInt(minMembers),
+        maxMembers: Number.parseInt(maxMembers),
+      })
+
+      const newPoolId = await addBreadfund({
+        name,
+        token: selectedToken.symbol,
+        tokenAddress: selectedToken.address,
+        initialDeposit: Number.parseFloat(initialDeposit),
+        fixedMonthlyDeposit: Number.parseFloat(fixedMonthlyDeposit),
+        personalSaving: Number.parseFloat(personalSaving),
+        depositInterval: Number.parseInt(depositInterval),
+        maxWithdrawalsPerMember: Number.parseInt(maxWithdrawalsPerMember),
+        minMembers: Number.parseInt(minMembers),
+        maxMembers: Number.parseInt(maxMembers),
+      })
+
+      console.log("[v0] Pool created with ID:", newPoolId)
+
+      toast({ title: "Success", description: `Insurance pool "${name}" created successfully!` })
+
+      if (newPoolId) {
+        console.log("[v0] Navigating to pool page:", `/breadfund/${newPoolId}`)
+        router.push(`/breadfund/${newPoolId}`)
+      } else {
+        console.log("[v0] No pool ID returned, navigating to dashboard")
+        router.push("/dashboard")
+      }
+    } catch (error) {
+      console.error("[v0] Error creating pool:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create insurance pool. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreating(false)
+      setLoadingStep(0)
+      console.log("[v0] Form submission completed")
+    }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!tokenAddress) {
-      toast({ title: "Error", description: "Please select a token.", variant: "destructive" })
-      return
-    }
-    const selectedToken = ALLOWED_TOKENS_LIST.find((t) => t.address === tokenAddress)
-    if (!selectedToken) {
-      toast({ title: "Error", description: "Invalid token selected.", variant: "destructive" })
-      return
-    }
+  if (isCreating) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        <Card className="border-2 border-primary/20">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl mb-4">Creating Your Insurance Pool</CardTitle>
+            <CardDescription>Please wait while we set up your pool...</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
 
-    addBreadfund({
-      name,
-      token: selectedToken.symbol,
-      tokenAddress: selectedToken.address,
-      initialDeposit: Number.parseFloat(initialDeposit),
-      fixedMonthlyDeposit: Number.parseFloat(fixedMonthlyDeposit),
-      personalSaving: Number.parseFloat(personalSaving),
-      depositInterval: Number.parseInt(depositInterval),
-      maxWithdrawalsPerMember: Number.parseInt(maxWithdrawalsPerMember),
-      minMembers: Number.parseInt(minMembers),
-      maxMembers: Number.parseInt(maxMembers),
-    })
-    toast({ title: "Success", description: `Insurance pool "${name}" created!` })
-    router.push("/dashboard")
+              <div className="w-full space-y-3">
+                {loadingSteps.map((step, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <div
+                      className={`w-4 h-4 rounded-full flex-shrink-0 ${
+                        index < loadingStep
+                          ? "bg-green-500"
+                          : index === loadingStep
+                            ? "bg-primary animate-pulse"
+                            : "bg-muted"
+                      }`}
+                    />
+                    <span className={`text-sm ${index <= loadingStep ? "text-foreground" : "text-muted-foreground"}`}>
+                      {step}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center space-y-2 pt-4">
+                <p className="text-sm font-medium">Pool: {name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Token: {ALLOWED_TOKENS_LIST.find((t) => t.address === tokenAddress)?.symbol}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (showExplainer) {
+    const currentCard = explainerCards[currentExplainerStep]
+    return (
+      <TooltipProvider>
+        <div className="max-w-2xl mx-auto">
+          <Card className="border-2 border-primary/20">
+            <CardHeader className="text-center">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex justify-center mb-4">{currentCard.icon}</div>
+                  <CardTitle className="text-2xl mb-2">{currentCard.title}</CardTitle>
+                  <CardDescription className="text-base">{currentCard.description}</CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSkipExplainer}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground leading-relaxed text-xs text-center">{currentCard.details}</p>
+
+              {/* Progress indicator */}
+              <div className="flex justify-center mt-6 space-x-2">
+                {explainerCards.map((_, index) => (
+                  <div
+                    key={index}
+                    className={`h-2 w-8 rounded-full transition-colors ${
+                      index === currentExplainerStep ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button variant="outline" onClick={handleSkipExplainer}>
+                Skip Tutorial
+              </Button>
+              <Button onClick={handleNextExplainer}>
+                {currentExplainerStep < explainerCards.length - 1 ? "Next" : "Get Started"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </TooltipProvider>
+    )
   }
 
   return (
@@ -162,7 +389,7 @@ export default function CreateBreadfundPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="token">Token for Premiums & Payouts</Label>
+                    <Label htmlFor="token">Token for Premiums & Payouts *</Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -172,18 +399,25 @@ export default function CreateBreadfundPage() {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <Select onValueChange={setTokenAddress} value={tokenAddress} required>
-                    <SelectTrigger id="token">
-                      <SelectValue placeholder="Select token" />
+                  <Select onValueChange={setTokenAddress} value={tokenAddress}>
+                    <SelectTrigger id="token" className={!tokenAddress ? "border-red-300 focus:border-red-500" : ""}>
+                      <SelectValue placeholder="Select a token (required)" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ALLOWED_TOKENS_LIST.map((token) => (
-                        <SelectItem key={token.address} value={token.address}>
-                          {token.symbol}
+                      {ALLOWED_TOKENS_LIST.length > 0 ? (
+                        ALLOWED_TOKENS_LIST.map((token) => (
+                          <SelectItem key={token.address} value={token.address}>
+                            {token.symbol} - {token.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No tokens available
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
+                  {!tokenAddress && <p className="text-xs text-red-600">Please select a token to continue</p>}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -260,7 +494,7 @@ export default function CreateBreadfundPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="depositInterval">Premium Interval (days)</Label>
                     <Tooltip>
@@ -269,53 +503,6 @@ export default function CreateBreadfundPage() {
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>How often members need to make their regular premium payments (30 = monthly)</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Input
-                    id="depositInterval"
-                    type="number"
-                    value={depositInterval}
-                    onChange={(e) => setDepositInterval(e.target.value)}
-                    placeholder="e.g., 30"
-                    min="1"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="maxWithdrawals">Max Claims per Member (total)</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Maximum number of times a member can make claims over the pool's lifetime</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Input
-                    id="maxWithdrawals"
-                    type="number"
-                    value={maxWithdrawalsPerMember}
-                    onChange={(e) => setMaxWithdrawalsPerMember(e.target.value)}
-                    placeholder="e.g., 24"
-                    min="1"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="minMembers">Min Members to Activate Pool</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Minimum number of members needed before the pool becomes active and functional</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -378,8 +565,15 @@ export default function CreateBreadfundPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full">
-                Create Pool
+              <Button type="submit" className="w-full" disabled={isCreating}>
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating Pool...
+                  </>
+                ) : (
+                  "Create Pool"
+                )}
               </Button>
             </CardFooter>
           </Card>
